@@ -45,7 +45,7 @@ int main() {
 
     bus.send(command);
 
-    bus.receive(2, [] (std::optional<cctalk::Bus::DataCommand> dataCommand) {
+    bus.receive(1, [] (std::optional<cctalk::Bus::DataCommand> dataCommand) {
         std::cout << "device type: ";
         std::cout.write(reinterpret_cast<char*>(dataCommand->data), dataCommand->length);
         std::cout << std::endl;
