@@ -16,6 +16,15 @@ namespace cctalk {
         return true;
     }
 
+    void Bus::configure() {
+        using boost::asio::serial_port_base;
+        serialPort.set_option(serial_port_base::baud_rate(9600));
+        serialPort.set_option(serial_port_base::character_size(8));
+        serialPort.set_option(serial_port_base::stop_bits(serial_port_base::stop_bits::one));
+        serialPort.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
+        serialPort.set_option(serial_port_base::parity(serial_port_base::parity::none));
+    }
+
     bool Bus::ready() {
         return serialPort.is_open();
     }
@@ -32,112 +41,6 @@ namespace cctalk {
     void Bus::send(DataCommand command, std::function<void (bool)> callback) {
         auto buffer = createMessage(std::move(command));
         write(std::move(buffer), std::move(callback));
-    }
-
-    bool Bus::receive(unsigned char destination, CommandCallback callback) {
-        if (isReading) {
-            return false;
-        }
-        isReading = true;
-        readCallback = std::move(callback);
-        address = destination;
-
-        startReading();
-
-        return true;
-    }
-
-    void Bus::startReading() {
-        std::cout << "start reading" << std::endl;
-        using boost::asio::transfer_all;
-
-        readBuffer.resize(CCTALK_SIZE_WITHOUT_DATA);
-
-        auto bufferWrap = boost::asio::buffer(readBuffer.data(), readBuffer.size());
-        boost::asio::async_read(serialPort, std::move(bufferWrap), transfer_all(),
-                                [this] (boost::system::error_code errorCode, std::size_t) {
-            if (errorCode) {
-                return endReading(std::nullopt);
-            }
-            processReceived();
-        });
-    }
-
-    void Bus::endReading(std::optional<DataCommand> data) {
-        readCallback(std::move(data));
-        isReading = false;
-    }
-
-    void Bus::processReceived() {
-        std::cout << "processReceived" << std::endl;
-        auto header = reinterpret_cast<const MessageHeader*>(readBuffer.data());
-        if (isCorrectDestination(*header)) {
-            if (header->dataLength != 0) {
-                readMissing(*header);
-            } else {
-                receivedAll();
-            }
-        } else {
-            readNextMessage(*header);
-        }
-    }
-
-    bool Bus::isCorrectDestination(const MessageHeader &header) {
-        std::cout << "destination: " << (int)header.destination << " == " << (int)address << std::endl;
-        return header.destination == address;
-    }
-
-    void Bus::readMissing(const MessageHeader &header) {
-        std::cout << "read missing" << std::endl;
-        using boost::asio::transfer_all;
-
-        auto bufferPos = readBuffer.size();
-
-        // Warning: header not usable below this line:
-        readBuffer.resize(CCTALK_SIZE_WITHOUT_DATA + header.dataLength);
-
-        auto bufferWrap = boost::asio::buffer(readBuffer.data() + bufferPos,
-                                              readBuffer.size() - bufferPos);
-
-        boost::asio::async_read(serialPort, std::move(bufferWrap), transfer_all(),
-                                [this, header] (boost::system::error_code errorCode, std::size_t) {
-            if (errorCode) {
-                return endReading(std::nullopt);
-            }
-            receivedAll();
-        });
-    }
-
-    void Bus::receivedAll() {
-        auto header = reinterpret_cast<const MessageHeader*>(readBuffer.data());
-        DataCommand command;
-        command.destination = header->destination;
-        command.length = header->dataLength;
-        command.source = header->source;
-        command.header = static_cast<HeaderCode>(header->headerCode);
-        command.data = readBuffer.data() + CCTALK_SIZE_WITHOUT_DATA - 1;
-        readCallback(std::move(command));
-        isReading = false;
-    }
-
-    void Bus::readNextMessage(const MessageHeader &header) {
-        using boost::asio::transfer_all;
-
-        auto bufferPos = readBuffer.size();
-
-        // Warning: header not usable below this line:
-        readBuffer.resize(CCTALK_SIZE_WITHOUT_DATA + header.dataLength);
-
-        auto bufferWrap = boost::asio::buffer(readBuffer.data() + bufferPos,
-                                              readBuffer.size() - bufferPos);
-
-        boost::asio::async_read(serialPort, std::move(bufferWrap), transfer_all(),
-                                [this, header] (boost::system::error_code errorCode, std::size_t) {
-            if (errorCode) {
-                return endReading(std::nullopt);
-            }
-            startReading();
-        });
     }
 
     Bus::Buffer Bus::createMessage(const Command &&command) {
@@ -195,12 +98,117 @@ namespace cctalk {
         boost::asio::async_write(serialPort, std::move(bufferWrap), transfer_all(), std::move(handler));
     }
 
-    void Bus::configure() {
-        using boost::asio::serial_port_base;
-        serialPort.set_option(serial_port_base::baud_rate(9600));
-        serialPort.set_option(serial_port_base::character_size(8));
-        serialPort.set_option(serial_port_base::stop_bits(serial_port_base::stop_bits::one));
-        serialPort.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
-        serialPort.set_option(serial_port_base::parity(serial_port_base::parity::none));
+    void Bus::receive(unsigned char destination, CommandCallback callback) {
+        if (!callback) {
+            throw std::logic_error("invalid callback passed");
+        }
+
+        addReadCallback(std::make_pair(std::move(destination), callback));
+        auto expectedReadingState = false;
+        if (isReading.compare_exchange_strong(expectedReadingState, true)) {
+            startReading();
+        }
+    }
+
+    void Bus::addReadCallback(std::pair<unsigned char, CommandCallback> callback) {
+        std::lock_guard lock(readCallbackMutex);
+        readCallbacks.emplace_back(std::move(callback));
+    }
+
+    void Bus::startReading() {
+        using boost::asio::transfer_all;
+
+        readBuffer.resize(CCTALK_SIZE_WITHOUT_DATA);
+
+        auto bufferWrap = boost::asio::buffer(readBuffer.data(), readBuffer.size());
+        boost::asio::async_read(serialPort, std::move(bufferWrap), transfer_all(),
+                                [this] (boost::system::error_code errorCode, std::size_t) {
+            if (errorCode) {
+                return cancelReading();
+            }
+            processReceived();
+        });
+    }
+
+    void Bus::cancelReading() {
+        std::lock_guard lock(readCallbackMutex);
+        for (auto &callback: readCallbacks) {
+            callback.second(std::nullopt);
+        }
+        readCallbacks.clear();
+        isReading = false;
+    }
+
+    void Bus::processReceived() {
+        std::cout << "process Received" << std::endl;
+        auto header = reinterpret_cast<const MessageHeader*>(readBuffer.data());
+        if (header->dataLength == 0) {
+            receivedAll();
+        } else {
+            readMissing(header->dataLength);
+        }
+    }
+
+    void Bus::readMissing(const unsigned char dataLength) {
+        std::cout << "read missing" << std::endl;
+        using boost::asio::transfer_all;
+
+        auto bufferPos = readBuffer.size();
+
+        readBuffer.resize(CCTALK_SIZE_WITHOUT_DATA + dataLength);
+
+        auto bufferWrap = boost::asio::buffer(readBuffer.data() + bufferPos,
+                                              readBuffer.size() - bufferPos);
+
+        boost::asio::async_read(serialPort, std::move(bufferWrap), transfer_all(),
+                                [this] (boost::system::error_code errorCode, std::size_t) {
+            if (errorCode) {
+                return cancelReading();
+            }
+            receivedAll();
+        });
+    }
+
+    void Bus::receivedAll() {
+        callReadCallback();
+
+        std::lock_guard lock(readCallbackMutex);
+        if (!readCallbacks.empty()) {
+            startReading();
+        }
+    }
+
+    void Bus::callReadCallback() {
+        auto header = reinterpret_cast<const MessageHeader*>(readBuffer.data());
+
+        if (auto callback = popCorrespondingReadCallback(header->destination)) {
+            DataCommand command;
+            command.destination = header->destination;
+            command.source = header->source;
+            command.header = static_cast<HeaderCode>(header->headerCode);
+
+            command.length = header->dataLength;
+            command.data = readBuffer.data() + CCTALK_SIZE_WITHOUT_DATA - 1;
+
+            (*callback)(command);
+        }
+    }
+
+    std::optional<Bus::CommandCallback> Bus::popCorrespondingReadCallback(const unsigned char destination) {
+        std::lock_guard lock(readCallbackMutex);
+
+        auto iterator = std::find_if(readCallbacks.begin(),
+                        readCallbacks.end(),
+                        [destination] (const std::pair<unsigned char, CommandCallback> &callback) {
+            return callback.first == destination;
+        });
+
+        if (iterator != readCallbacks.end()) {
+            CommandCallback callback = std::move(iterator->second);
+            readCallbacks.erase(iterator);
+
+            return std::move(callback);
+        }
+        return std::nullopt;
     }
 }

@@ -46,8 +46,6 @@ namespace cctalk {
         typedef std::function<void (std::optional<DataCommand> command)> CommandCallback;
 
         Bus(boost::asio::io_context &ioContext);
-        //Bus(const char *path);
-        //Bus(libusb_device_handle *device);
 
         bool open(const char *path);
 
@@ -57,7 +55,7 @@ namespace cctalk {
         void send(const Command command, std::function<void (bool)> callback = std::function<void (bool)>());
         void send(const DataCommand command, std::function<void (bool)> callback = std::function<void (bool)>());
 
-        bool receive(unsigned char destination, CommandCallback function);
+        void receive(unsigned char destination, CommandCallback function);
 
     private:
         static Buffer createMessage(const Command &&command);
@@ -69,22 +67,24 @@ namespace cctalk {
                                    const DataCommand &dataCommand);
         static void addChecksum(Buffer &buffer);
 
+
+        void addReadCallback(std::pair<unsigned char, CommandCallback> callback);
         void startReading();
-        void endReading(std::optional<DataCommand> data);
+        void cancelReading();
         void processReceived();
-        bool isCorrectDestination(const MessageHeader &header);
-        void readMissing(const MessageHeader &header);
-        void readNextMessage(const MessageHeader &header);
+        std::optional<CommandCallback> popCorrespondingReadCallback(const unsigned char destination);
+        void readMissing(const unsigned char dataLength);
         void receivedAll();
+        void callReadCallback();
 
         void write(Buffer &&buffer, std::function<void (bool)> &&callback);
         inline void configure();
 
         boost::asio::serial_port serialPort;
 
+        std::mutex readCallbackMutex;
         std::atomic_bool isReading;
-        CommandCallback readCallback;
-        unsigned char address;
+        std::vector<std::pair<unsigned char, CommandCallback>> readCallbacks;
         std::vector<unsigned char> readBuffer;
     };
 
