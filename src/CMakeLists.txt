@@ -1,5 +1,6 @@
 set(SOURCE_FILES
     bus.cpp
+    coin.cpp
 )
 
 link_libraries(${Boost_LIBRARIES})
