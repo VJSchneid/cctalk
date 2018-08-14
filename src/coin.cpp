@@ -44,7 +44,7 @@ namespace cctalk {
         revision = newRevision;
     }
 
-    bool Coin::operator==(const Coin &coin) noexcept {
+    bool Coin::sameType(const Coin &coin) const noexcept {
         if (currency == coin.currency || (currency == 0 || coin.currency == 0)) {
             if (value == coin.value || (value == 0 || coin.value == 0)) {
                 if (revision == coin.revision || (revision == 0 || coin.revision == 0)) {
@@ -55,11 +55,22 @@ namespace cctalk {
         return false;
     }
 
-    bool Coin::operator!=(const Coin &coin) noexcept {
+    bool Coin::operator==(const Coin &coin) const noexcept {
+        if (currency == coin.currency) {
+            if (value == coin.value) {
+                if (revision == coin.revision) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool Coin::operator!=(const Coin &coin) const noexcept {
         return !(*this == coin);
     }
 
-    int Coin::getSpecialization() {
+    int Coin::getSpecialization() const noexcept {
         int specialization = 0;
         specialization += currency != 0;
         specialization += value != 0;

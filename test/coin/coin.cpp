@@ -57,8 +57,8 @@ BOOST_AUTO_TEST_CASE(CompareCoinWithoutCurrency) {
     Coin coin1(Coin::makeCurrency("EU"), 100, Coin::D);
     Coin coin2(0, 100, Coin::D);
 
-    BOOST_CHECK(coin1 == coin2);
-    BOOST_CHECK(coin2 == coin1);
+    BOOST_CHECK(coin1.sameType(coin2));
+    BOOST_CHECK(coin2.sameType(coin1));
 }
 
 BOOST_AUTO_TEST_CASE(CompareCoinWithoutValue) {
@@ -67,8 +67,8 @@ BOOST_AUTO_TEST_CASE(CompareCoinWithoutValue) {
     Coin coin1(Coin::makeCurrency("EU"), 100, Coin::D);
     Coin coin2(Coin::makeCurrency("EU"), 0, Coin::D);
 
-    BOOST_CHECK(coin1 == coin2);
-    BOOST_CHECK(coin2 == coin1);
+    BOOST_CHECK(coin1.sameType(coin2));
+    BOOST_CHECK(coin2.sameType(coin1));
 }
 
 BOOST_AUTO_TEST_CASE(CompareCoinWithoutRevision) {
@@ -77,8 +77,8 @@ BOOST_AUTO_TEST_CASE(CompareCoinWithoutRevision) {
     Coin coin1(Coin::makeCurrency("EU"), 100, Coin::D);
     Coin coin2(Coin::makeCurrency("EU"), 100, Coin::NONE);
 
-    BOOST_CHECK(coin1 == coin2);
-    BOOST_CHECK(coin2 == coin1);
+    BOOST_CHECK(coin1.sameType(coin2));
+    BOOST_CHECK(coin2.sameType(coin1));
 }
 
 BOOST_AUTO_TEST_CASE(CompareCoinWithDifferentCurrency) {
@@ -87,8 +87,8 @@ BOOST_AUTO_TEST_CASE(CompareCoinWithDifferentCurrency) {
     Coin coin1(Coin::makeCurrency("EU"), 100, Coin::D);
     Coin coin2(Coin::makeCurrency("DE"), 100, Coin::D);
 
-    BOOST_CHECK(coin1 != coin2);
-    BOOST_CHECK(coin2 != coin1);
+    BOOST_CHECK(!coin1.sameType(coin2));
+    BOOST_CHECK(!coin2.sameType(coin1));
 }
 
 BOOST_AUTO_TEST_CASE(CompareCoinWithDifferentValue) {
@@ -97,8 +97,8 @@ BOOST_AUTO_TEST_CASE(CompareCoinWithDifferentValue) {
     Coin coin1(Coin::makeCurrency("EU"), 100, Coin::D);
     Coin coin2(Coin::makeCurrency("EU"), 150, Coin::D);
 
-    BOOST_CHECK(coin1 != coin2);
-    BOOST_CHECK(coin2 != coin1);
+    BOOST_CHECK(!coin1.sameType(coin2));
+    BOOST_CHECK(!coin2.sameType(coin1));
 }
 
 BOOST_AUTO_TEST_CASE(CompareCoinWithDifferentRevision) {
@@ -107,8 +107,8 @@ BOOST_AUTO_TEST_CASE(CompareCoinWithDifferentRevision) {
     Coin coin1(Coin::makeCurrency("EU"), 100, Coin::B);
     Coin coin2(Coin::makeCurrency("EU"), 100, Coin::D);
 
-    BOOST_CHECK(coin1 != coin2);
-    BOOST_CHECK(coin2 != coin1);
+    BOOST_CHECK(!coin1.sameType(coin2));
+    BOOST_CHECK(!coin2.sameType(coin1));
 }
 
 BOOST_AUTO_TEST_CASE(Specialization) {

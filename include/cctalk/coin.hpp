@@ -53,15 +53,16 @@ namespace cctalk {
         unsigned short getCurrency() const noexcept;
         unsigned int getValue() const noexcept;
         Revision getRevision() const noexcept;
+        int getSpecialization() const noexcept;
 
         void setCurrency(unsigned short newCurrency) noexcept;
         void setValue(unsigned int newValue) noexcept;
         void setRevision(Revision newRevision) noexcept;
 
-        bool operator==(const Coin &coin) noexcept;
-        bool operator!=(const Coin &coin) noexcept;
+        bool sameType(const Coin &coin) const noexcept;
 
-        int getSpecialization();
+        bool operator==(const Coin &coin) const noexcept;
+        bool operator!=(const Coin &coin) const noexcept;
 
     private:
 

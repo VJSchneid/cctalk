@@ -140,7 +140,6 @@ namespace cctalk {
     }
 
     void Bus::processReceived() {
-        std::cout << "process Received" << std::endl;
         auto header = reinterpret_cast<const MessageHeader*>(readBuffer.data());
         if (header->dataLength == 0) {
             receivedAll();
@@ -150,7 +149,6 @@ namespace cctalk {
     }
 
     void Bus::readMissing(const unsigned char dataLength) {
-        std::cout << "read missing" << std::endl;
         using boost::asio::transfer_all;
 
         auto bufferPos = readBuffer.size();

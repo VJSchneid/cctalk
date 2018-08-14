@@ -12,14 +12,35 @@ int main() {
     cctalk::Bus::Command command;
     command.destination = 2;
     command.source = 1;
-    command.header = cctalk::Bus::REQUEST_EQUIPMENT_CATEGORY_ID;
+    command.header = cctalk::Bus::RESET_DEVICE;
 
-    bus.send(command);
-
-    bus.receive(2, [] (std::optional<cctalk::Bus::DataCommand> dataCommand) {
-        std::cout << "device type: ";
-        std::cout.write(reinterpret_cast<char*>(dataCommand->data), dataCommand->length);
+    std::function<void (std::optional<cctalk::Bus::DataCommand>)> handler = [&] (std::optional<cctalk::Bus::DataCommand> data) {
+        std::cout << "received something" << std::endl;
+        std::cout.write(reinterpret_cast<char*>(data->data), data->length);
         std::cout << std::endl;
+
+        bus.send(command);
+        bus.receive(1, handler);
+    };
+
+    int money = 0;
+
+    cctalk::CoinAcceptor coinAcceptor(bus);
+
+    coinAcceptor.setCoinCallback([&money] (const cctalk::Coin &coin) {
+        money += coin.getValue();
+        std::cout << static_cast<float>(money) / 100 << std::endl;
+    });
+
+    coinAcceptor.enableCoin(cctalk::Coin(cctalk::Coin::makeCurrency("EU"), 0));
+
+    coinAcceptor.open(2, [&coinAcceptor] (bool success) {
+        if (success) {
+            std::cout << "opened successfully!" << std::endl;
+            coinAcceptor.start();
+        } else {
+            std::cout << "failed to open" << std::endl;
+        }
     });
 
     ioContext.run();
