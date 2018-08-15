@@ -6,12 +6,22 @@ namespace cctalk {
 
     CoinAcceptor::CoinAcceptor(cctalk::Bus &bus, unsigned char sourceAddress)
             : bus(bus), sourceAddress(sourceAddress) {
+        validated = false;
     }
 
     void CoinAcceptor::open(unsigned char address, const std::function<void (bool)> callback) {
+        validated = false;
         destinationAddress = address;
 
         initialize(std::move(callback));
+    }
+
+    bool CoinAcceptor::ready() {
+        return validated;
+    }
+
+    CoinAcceptor::operator bool() {
+        return ready();
     }
 
     void CoinAcceptor::disableCoin(const Coin &coin) {
@@ -86,12 +96,9 @@ namespace cctalk {
         addLeftSupportedCoins(std::move(callback));
     }
 
+
     void CoinAcceptor::addLeftSupportedCoins(const std::function<void (bool)> &&callback) {
         unsigned char coinId = supportedCoins.size() + 1;
-
-        for (auto &coin : supportedCoins) {
-            std::cout << "supportedCoin: " << coin << std::endl;
-        }
 
         auto command = createDataCommand(Bus::REQUEST_COIN_ID, &coinId, 1);
 
@@ -104,7 +111,7 @@ namespace cctalk {
                 if (addSupportedCoin(coinCode)) {
                     addLeftSupportedCoins(std::move(callback));
                 } else {
-                    callback(true);
+                    initializeCounter(std::move(callback));
                 }
             } else {
                 callback(false);
@@ -129,7 +136,20 @@ namespace cctalk {
         return false;
     }
 
+    void CoinAcceptor::initializeCounter(const std::function<void (bool)> &&callback) {
+        auto command = createCommand(Bus::READ_BUFFERED_CREDIT_OR_ERROR_CODES);
 
+        bus.send(command);
+        bus.receive(sourceAddress, [this, callback] (std::optional<Bus::DataCommand> command) {
+            if (command && command->length > 0) {
+                lastCounter = command->data[0];
+                validated = true;
+                callback(true);
+            } else {
+                callback(false);
+            }
+        });
+    }
 
     Bus::Command &&CoinAcceptor::createCommand(const Bus::HeaderCode code) {
         Bus::Command command;

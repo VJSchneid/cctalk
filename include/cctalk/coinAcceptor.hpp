@@ -26,6 +26,7 @@ namespace cctalk {
         void initialize(const std::function<void (bool)> &&callback);
         void validateEquipmentCategory(const std::function<void (bool)> &&callback);
         void initializeSupportedCoins(const std::function<void (bool)> &&callback);
+        void initializeCounter(const std::function<void (bool)> &&callback);
 
         void addLeftSupportedCoins(const std::function<void (bool)> &&callback);
         bool addSupportedCoin(const std::string_view &coinCode);
@@ -54,13 +55,14 @@ namespace cctalk {
 
         unsigned char lastCounter = 0;
 
-        std::function<void(const Coin&)> coinCallback;
-
         std::atomic_bool changedCoins;
+        std::atomic_bool validated;
 
         std::vector<Coin> supportedCoins;
 
         std::vector<Coin> disabledCoins;
         std::vector<Coin> enabledCoins;
+
+        std::function<void(const Coin&)> coinCallback;
     };
 }
