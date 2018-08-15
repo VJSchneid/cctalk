@@ -6,7 +6,10 @@ set(SOURCE_FILES
 
 link_libraries(${Boost_LIBRARIES})
 
-
-add_library(cctalk
+add_library(cctalk SHARED
     ${SOURCE_FILES}
 )
+
+if (WITH_PYTHON_LIB)
+  add_subdirectory(py)
+endif ()

@@ -52,6 +52,7 @@ namespace cctalk {
         typedef std::function<void (std::optional<DataCommand> command)> CommandCallback;
 
         Bus(boost::asio::io_context &ioContext);
+        virtual ~Bus() = default;
 
         bool open(const char *path);
 
