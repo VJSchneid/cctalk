@@ -6,7 +6,7 @@ set(SOURCE_FILES
 
 link_libraries(${Boost_LIBRARIES})
 
-add_library(cctalk SHARED
+add_library(cctalk
     ${SOURCE_FILES}
 )
 
