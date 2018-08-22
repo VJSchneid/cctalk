@@ -4,6 +4,7 @@
 #include <functional>
 #include <vector>
 #include <cstdint>
+#include <mutex>
 #include <boost/asio.hpp>
 
 namespace cctalk {
