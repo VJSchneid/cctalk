@@ -7,6 +7,12 @@
 #include <mutex>
 #include <boost/asio.hpp>
 
+#if BOOST_VERSION < 106600
+    namespace boost::asio {
+        typedef io_service io_context;
+    }
+#endif
+
 namespace cctalk {
 
     class Bus {
