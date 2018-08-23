@@ -73,11 +73,7 @@ namespace cctalk {
     }
 
     void CoinAcceptor::validateEquipmentCategory(const std::function<void (bool)> &&callback) {
-        Bus::Command command;
-        command.destination = 2;
-        command.source = 1;
-        command.header = cctalk::Bus::REQUEST_EQUIPMENT_CATEGORY_ID;
-        //auto command = createCommand(Bus::REQUEST_EQUIPMENT_CATEGORY_ID);
+        auto command = createCommand(Bus::REQUEST_EQUIPMENT_CATEGORY_ID);
 
         bus.send(std::move(command));
 
@@ -157,8 +153,8 @@ namespace cctalk {
 
     Bus::Command CoinAcceptor::createCommand(const Bus::HeaderCode code) {
         Bus::Command command;
-        command.source = 1;
-        command.destination = 2;
+        command.source = sourceAddress;
+        command.destination = destinationAddress;
         command.header = code;
         return std::move(command);
     }
