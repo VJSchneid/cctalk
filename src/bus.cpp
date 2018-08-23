@@ -77,8 +77,9 @@ namespace cctalk {
     }
 
     void Bus::addChecksum(Buffer &buffer) {
-        unsigned int sum = 0;
+        unsigned char sum = 0;
         for (auto &element: buffer) {
+            std::cout << (int)element << std::endl;
             sum += element;
         }
         buffer.emplace_back((~sum) + 1);

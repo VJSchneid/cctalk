@@ -31,8 +31,8 @@ namespace cctalk {
         void addLeftSupportedCoins(const std::function<void (bool)> &&callback);
         bool addSupportedCoin(const std::string_view &coinCode);
 
-        Bus::Command &&createCommand(const Bus::HeaderCode headerCode);
-        Bus::DataCommand &&createDataCommand(const Bus::HeaderCode headerCode, unsigned char *data, unsigned char length);
+        Bus::Command createCommand(const Bus::HeaderCode headerCode);
+        Bus::DataCommand createDataCommand(const Bus::HeaderCode headerCode, unsigned char *data, unsigned char length);
 
         static bool removeCoin(std::vector<Coin> &vector, const Coin &coin);
         inline static bool coinExists(std::vector<Coin> &vector, const Coin &coin);

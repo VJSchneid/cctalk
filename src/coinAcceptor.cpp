@@ -73,9 +73,13 @@ namespace cctalk {
     }
 
     void CoinAcceptor::validateEquipmentCategory(const std::function<void (bool)> &&callback) {
-        auto command = createCommand(Bus::REQUEST_EQUIPMENT_CATEGORY_ID);
+        Bus::Command command;
+        command.destination = 2;
+        command.source = 1;
+        command.header = cctalk::Bus::REQUEST_EQUIPMENT_CATEGORY_ID;
+        //auto command = createCommand(Bus::REQUEST_EQUIPMENT_CATEGORY_ID);
 
-        bus.send(command);
+        bus.send(std::move(command));
 
         bus.receive(sourceAddress, [this, callback] (std::optional<Bus::DataCommand> command) {
             if (command) {
@@ -151,15 +155,15 @@ namespace cctalk {
         });
     }
 
-    Bus::Command &&CoinAcceptor::createCommand(const Bus::HeaderCode code) {
+    Bus::Command CoinAcceptor::createCommand(const Bus::HeaderCode code) {
         Bus::Command command;
-        command.source = sourceAddress;
-        command.destination = destinationAddress;
+        command.source = 1;
+        command.destination = 2;
         command.header = code;
         return std::move(command);
     }
 
-    Bus::DataCommand &&CoinAcceptor::createDataCommand(const Bus::HeaderCode code,
+    Bus::DataCommand CoinAcceptor::createDataCommand(const Bus::HeaderCode code,
                                                        unsigned char *data,
                                                        unsigned char length) {
         Bus::DataCommand command;

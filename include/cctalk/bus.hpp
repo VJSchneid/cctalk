@@ -46,14 +46,14 @@ namespace cctalk {
         };
 
         struct Command {
-            unsigned char destination;
-            unsigned char source;
-            HeaderCode header;
+            unsigned char destination = 0;
+            unsigned char source = 0;
+            HeaderCode header = RESET_DEVICE;
         };
 
         struct DataCommand: Command {
-            unsigned char *data;
-            unsigned char length;
+            unsigned char *data = nullptr;
+            unsigned char length = 0;
         };
 
         typedef std::function<void (std::optional<DataCommand> command)> CommandCallback;
