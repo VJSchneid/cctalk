@@ -248,6 +248,20 @@ namespace cctalk {
     }
 
     void CoinAcceptor::handlePollLoop(std::optional<Bus::DataCommand> command) {
+        if (command) {
+            std::cout << "received: "
+                      << (int)command->destination << ", "
+                      << (int)command->length << ", "
+                      << (int)command->source << ", "
+                      << (int)command->header << ", ";
+            for (int x = 0; x < command->length; x++) {
+                std::cout << ", " << (int)command->data[x];
+            }
+            std::cout << std::endl;
+        } else {
+            std::cout << "failed to receive response" << std::endl;
+        }
+
         if (command && command->length >= 3) {
             if (command->data[0] != lastCounter) {
                 lastCounter = command->data[0];
