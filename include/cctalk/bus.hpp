@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <boost/asio.hpp>
 
 #if BOOST_VERSION < 106600
