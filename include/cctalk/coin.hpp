@@ -73,7 +73,7 @@ namespace cctalk {
     };
 
     constexpr short getCurrencyShort(const char *prefix) {
-        return prefix[0] << 8 + prefix[1];
+        return (prefix[0] << 8) + prefix[1];
     }
 
     static const short CurrencyPrefix = {
